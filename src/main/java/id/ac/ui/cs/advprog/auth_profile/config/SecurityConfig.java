@@ -32,6 +32,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/", "/index.html", "/*.html", "/*.js", "/*.css").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/profile/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
