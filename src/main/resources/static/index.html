@@ -4,135 +4,286 @@
     <meta charset="UTF-8">
     <title>JSON - Auth Profile</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 400px; margin: 50px auto; padding: 0 20px; }
-        input { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin-top: 8px; }
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+        .box { background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+        input, select { width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin-top: 6px; }
         button:hover { background: #0056b3; }
-        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
-        .message { margin-top: 12px; padding: 10px; border-radius: 4px; text-align: center; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .secondary { background: white; color: #007bff; border: 1px solid #007bff; margin-top: 8px; }
-        .secondary:hover { background: #f0f0f0; }
-        #logged-in { display: none; text-align: center; }
-        #logged-out { display: block; }
-        #register-form { display: none; margin-top: 16px; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #a71d2a; }
+        .btn-secondary { background: white; color: #007bff; border: 1px solid #007bff; }
+        .btn-secondary:hover { background: #f0f0f0; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .msg { margin-top: 10px; padding: 8px; border-radius: 4px; text-align: center; }
+        .msg-ok { background: #d4edda; color: #155724; }
+        .msg-err { background: #f8d7da; color: #721c24; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        .tag-admin { background: #dc3545; color: white; }
+        .tag-jastiper { background: #28a745; color: white; }
+        .tag-titipers { background: #007bff; color: white; }
+        .tag-pending { background: #ffc107; color: #333; }
+        .tag-banned { background: #333; color: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        td, th { padding: 6px; text-align: left; border-bottom: 1px solid #eee; }
+        .hidden { display: none; }
+        h2 { margin-top: 0; }
+        .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+        .nav button { width: auto; padding: 8px 16px; font-size: 13px; }
+        .user-row { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .user-row:last-child { border: none; }
+        .small-btn { width: auto; padding: 4px 10px; font-size: 12px; margin: 2px; }
     </style>
 </head>
 <body>
 
-<!-- Tampilan kalau belum login -->
-<div id="logged-out">
+<div id="auth-page">
     <div class="box">
-        <h2 style="text-align:center; margin-top:0">JSON Auth</h2>
-
+        <h2 style="text-align:center">JSON Auth</h2>
         <div id="login-form">
-            <input type="email" id="login-email" placeholder="Email">
-            <input type="password" id="login-password" placeholder="Password">
+            <input type="email" id="l-email" placeholder="Email">
+            <input type="password" id="l-pass" placeholder="Password">
             <button onclick="login()">Login</button>
-            <button class="secondary" onclick="showRegister()">Belum punya akun? Register</button>
+            <button class="btn-secondary" onclick="toggle('register')">Belum punya akun?</button>
         </div>
-
-        <div id="register-form">
-            <input type="email" id="reg-email" placeholder="Email">
-            <input type="password" id="reg-password" placeholder="Password">
-            <input type="text" id="reg-username" placeholder="Username (opsional)">
+        <div id="register-form" class="hidden">
+            <input type="email" id="r-email" placeholder="Email">
+            <input type="password" id="r-pass" placeholder="Password">
+            <input type="text" id="r-user" placeholder="Username (opsional)">
             <button onclick="register()">Register</button>
-            <button class="secondary" onclick="showLogin()">Udah punya akun? Login</button>
+            <button class="btn-secondary" onclick="toggle('login')">Udah punya akun?</button>
         </div>
-
-        <div id="message"></div>
+        <div id="auth-msg"></div>
     </div>
 </div>
 
-<!-- Tampilan kalau sudah login -->
-<div id="logged-in">
-    <div class="box">
-        <h2 style="margin-top:0">Selamat datang!</h2>
-        <p>Login sebagai: <strong id="user-email"></strong></p>
-        <button onclick="logout()" style="background:#dc3545;">Logout</button>
+<div id="app-page" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span>Hi, <strong id="nav-email"></strong> <span id="nav-role" class="tag"></span></span>
+        <button style="width:auto; padding:6px 14px;" class="btn-danger" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="nav">
+        <button onclick="showTab('profile')" id="tab-profile">Profil</button>
+        <button onclick="showTab('kyc')" id="tab-kyc">KYC</button>
+        <button onclick="showTab('admin')" id="tab-admin">Admin</button>
+    </div>
+
+    <!-- Profile -->
+    <div id="p-profile" class="box">
+        <h2>Profil</h2>
+        <div id="profile-info"></div>
+        <hr>
+        <h3>Edit Profil</h3>
+        <input type="text" id="edit-username" placeholder="Username baru">
+        <input type="text" id="edit-fullname" placeholder="Nama Lengkap">
+        <button onclick="updateProfile()">Simpan</button>
+        <div id="profile-msg"></div>
+    </div>
+
+    <!-- KYC -->
+    <div id="p-kyc" class="box hidden">
+        <h2>Pengajuan Jastiper (KYC)</h2>
+        <div id="kyc-status"></div>
+        <div id="kyc-form">
+            <input type="text" id="kyc-name" placeholder="Nama Lengkap (sesuai KTP)">
+            <input type="text" id="kyc-nik" placeholder="NIK (16 digit)">
+            <input type="text" id="kyc-phone" placeholder="Nomor HP (08xxxxxxxxxx)">
+            <button class="btn-success" onclick="submitKyc()">Ajukan KYC</button>
+        </div>
+        <div id="kyc-msg"></div>
+    </div>
+
+    <!-- Admin -->
+    <div id="p-admin" class="box hidden">
+        <h2>Admin Panel</h2>
+        <button onclick="loadUsers()">Refresh</button>
+        <div id="admin-users" style="margin-top:12px;"></div>
+        <div id="admin-msg"></div>
     </div>
 </div>
 
 <script>
-    // Cek session waktu halaman dibuka
-    window.onload = function() {
-        const email = sessionStorage.getItem('userEmail');
-        if (email) showLoggedIn(email);
+let token = sessionStorage.getItem('token');
+let me = null;
+
+window.onload = () => { if (token) loadMe(); };
+
+function api(method, url, body) {
+    const opts = { method, headers: {} };
+    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    return fetch(url, opts);
+}
+
+function msg(id, text, ok) {
+    const el = document.getElementById(id);
+    el.innerHTML = '<div class="msg ' + (ok ? 'msg-ok' : 'msg-err') + '">' + text + '</div>';
+    setTimeout(() => el.innerHTML = '', 3000);
+}
+
+function toggle(form) {
+    document.getElementById('login-form').classList.toggle('hidden', form !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', form !== 'register');
+    document.getElementById('auth-msg').innerHTML = '';
+}
+
+function roleTag(role) {
+    const cls = role === 'ADMIN' ? 'tag-admin' : role === 'JASTIPER' ? 'tag-jastiper' : 'tag-titipers';
+    return '<span class="tag ' + cls + '">' + role + '</span>';
+}
+
+async function register() {
+    const res = await api('POST', '/auth/register', {
+        email: document.getElementById('r-email').value,
+        password: document.getElementById('r-pass').value,
+        username: document.getElementById('r-user').value || undefined
+    });
+    const data = await res.json();
+    if (res.ok) { msg('auth-msg', 'Register berhasil! Silakan login.', true); toggle('login'); }
+    else msg('auth-msg', data.error || 'Gagal register', false);
+}
+
+async function login() {
+    const res = await api('POST', '/auth/login', {
+        email: document.getElementById('l-email').value,
+        password: document.getElementById('l-pass').value
+    });
+    const data = await res.json();
+    if (res.ok) { token = data.token; sessionStorage.setItem('token', token); loadMe(); }
+    else msg('auth-msg', data.error || 'Email atau password salah', false);
+}
+
+function logout() {
+    token = null; me = null;
+    sessionStorage.removeItem('token');
+    document.getElementById('auth-page').classList.remove('hidden');
+    document.getElementById('app-page').classList.add('hidden');
+}
+
+async function loadMe() {
+    const res = await api('GET', '/auth/me');
+    if (!res.ok) { logout(); return; }
+    me = await res.json();
+    document.getElementById('auth-page').classList.add('hidden');
+    document.getElementById('app-page').classList.remove('hidden');
+    document.getElementById('nav-email').innerText = me.email;
+    document.getElementById('nav-role').className = 'tag ' + (me.role === 'ADMIN' ? 'tag-admin' : me.role === 'JASTIPER' ? 'tag-jastiper' : 'tag-titipers');
+    document.getElementById('nav-role').innerText = me.role;
+    document.getElementById('tab-admin').classList.toggle('hidden', me.role !== 'ADMIN');
+    showTab('profile');
+}
+
+function showTab(tab) {
+    ['profile','kyc','admin'].forEach(t => document.getElementById('p-' + t).classList.toggle('hidden', t !== tab));
+    if (tab === 'profile') loadProfile();
+    if (tab === 'kyc') loadKyc();
+    if (tab === 'admin') loadUsers();
+}
+
+async function loadProfile() {
+    const res = await api('GET', '/profile/' + me.id);
+    if (!res.ok) return;
+    const p = await res.json();
+    document.getElementById('profile-info').innerHTML =
+        '<table><tr><td><b>Email</b></td><td>' + p.email + '</td></tr>' +
+        '<tr><td><b>Username</b></td><td>' + p.username + '</td></tr>' +
+        '<tr><td><b>Nama</b></td><td>' + (p.fullName || '-') + '</td></tr>' +
+        '<tr><td><b>Role</b></td><td>' + roleTag(p.role) + '</td></tr>' +
+        '<tr><td><b>KYC</b></td><td>' + (p.kycStatus || 'NONE') + '</td></tr></table>';
+    document.getElementById('edit-username').value = p.username || '';
+    document.getElementById('edit-fullname').value = p.fullName || '';
+}
+
+async function updateProfile() {
+    const res = await api('PUT', '/profile', {
+        username: document.getElementById('edit-username').value,
+        fullName: document.getElementById('edit-fullname').value
+    });
+    const data = await res.json();
+    if (res.ok) { msg('profile-msg', 'Profil diupdate!', true); loadProfile(); }
+    else msg('profile-msg', data.error || 'Gagal update', false);
+}
+
+async function loadKyc() {
+    const res = await api('GET', '/profile/' + me.id);
+    if (!res.ok) return;
+    const p = await res.json();
+    const status = p.kycStatus || 'NONE';
+    const el = document.getElementById('kyc-status');
+    const form = document.getElementById('kyc-form');
+
+    if (status === 'APPROVED') {
+        el.innerHTML = '<div class="msg msg-ok">KYC disetujui! Kamu sudah menjadi Jastiper.</div>';
+        form.classList.add('hidden');
+    } else if (status === 'PENDING') {
+        el.innerHTML = '<div class="msg" style="background:#fff3cd;color:#856404;">KYC sedang direview admin.</div>';
+        form.classList.add('hidden');
+    } else if (status === 'REJECTED') {
+        el.innerHTML = '<div class="msg msg-err">KYC ditolak. Silakan ajukan ulang.</div>';
+        form.classList.remove('hidden');
+    } else {
+        el.innerHTML = '';
+        form.classList.remove('hidden');
     }
+}
 
-    function showRegister() {
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('register-form').style.display = 'block';
-        clearMessage();
-    }
+async function submitKyc() {
+    const res = await api('POST', '/profile/kyc', {
+        kycFullName: document.getElementById('kyc-name').value,
+        nik: document.getElementById('kyc-nik').value,
+        phoneNumber: document.getElementById('kyc-phone').value
+    });
+    const data = await res.json();
+    if (res.ok) { msg('kyc-msg', 'KYC berhasil diajukan!', true); loadKyc(); }
+    else msg('kyc-msg', data.error || 'Gagal submit KYC', false);
+}
 
-    function showLogin() {
-        document.getElementById('register-form').style.display = 'none';
-        document.getElementById('login-form').style.display = 'block';
-        clearMessage();
-    }
-
-    function showLoggedIn(email) {
-        document.getElementById('logged-out').style.display = 'none';
-        document.getElementById('logged-in').style.display = 'block';
-        document.getElementById('user-email').innerText = email;
-    }
-
-    function clearMessage() {
-        document.getElementById('message').innerText = '';
-        document.getElementById('message').className = 'message';
-    }
-
-    function showMessage(text, isError) {
-        const el = document.getElementById('message');
-        el.innerText = text;
-        el.className = 'message ' + (isError ? 'error' : 'success');
-    }
-
-    async function register() {
-        const email = document.getElementById('reg-email').value;
-        const password = document.getElementById('reg-password').value;
-        const username = document.getElementById('reg-username').value;
-
-        const res = await fetch('/auth/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, password, username })
-        });
-        const text = await res.text();
-        if (res.ok) {
-            showMessage('Register berhasil! Silakan login.', false);
-            showLogin();
-        } else {
-            showMessage(text, true);
+async function loadUsers() {
+    const res = await api('GET', '/admin/users?page=0&size=50');
+    if (!res.ok) return;
+    const data = await res.json();
+    const users = data.content || [];
+    let html = '';
+    users.forEach(u => {
+        html += '<div class="user-row"><div><b>' + u.username + '</b> (' + u.email + ')<br>' +
+            roleTag(u.role) + ' ' +
+            (u.banned ? '<span class="tag tag-banned">BANNED</span> ' : '') +
+            (u.kycStatus === 'PENDING' ? '<span class="tag tag-pending">KYC PENDING</span>' : '') +
+            '</div><div>';
+        if (u.kycStatus === 'PENDING') {
+            html += '<button class="small-btn btn-success" onclick="kycAction(' + u.id + ',\'APPROVE\')">Approve</button>';
+            html += '<button class="small-btn btn-danger" onclick="kycAction(' + u.id + ',\'REJECT\')">Reject</button>';
         }
-    }
-
-    async function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
-        const res = await fetch('/auth/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, password })
-        });
-        const text = await res.text();
-        if (res.ok) {
-            sessionStorage.setItem('userEmail', email);
-            showLoggedIn(email);
-        } else {
-            showMessage(text, true);
+        if (u.role === 'JASTIPER') {
+            html += '<button class="small-btn btn-warning" onclick="demote(' + u.id + ')">Demote</button>';
         }
-    }
+        if (!u.banned && u.role !== 'ADMIN') {
+            html += '<button class="small-btn btn-danger" onclick="ban(' + u.id + ')">Ban</button>';
+        }
+        html += '</div></div>';
+    });
+    document.getElementById('admin-users').innerHTML = html || '<p>Tidak ada user.</p>';
+}
 
-    function logout() {
-        sessionStorage.removeItem('userEmail');
-        document.getElementById('logged-in').style.display = 'none';
-        document.getElementById('logged-out').style.display = 'block';
-        showLogin();
-    }
+async function kycAction(id, action) {
+    const res = await api('PUT', '/admin/users/' + id + '/kyc?action=' + action);
+    if (res.ok) { msg('admin-msg', 'KYC ' + action, true); loadUsers(); }
+    else msg('admin-msg', 'Gagal', false);
+}
+
+async function demote(id) {
+    const res = await api('PUT', '/admin/users/' + id + '/role?role=TITIPERS');
+    if (res.ok) { msg('admin-msg', 'User didemote', true); loadUsers(); }
+    else msg('admin-msg', 'Gagal', false);
+}
+
+async function ban(id) {
+    const res = await api('PUT', '/admin/users/' + id + '/ban');
+    if (res.ok) { msg('admin-msg', 'User dibanned', true); loadUsers(); }
+    else msg('admin-msg', 'Gagal', false);
+}
 </script>
 </body>
 </html>

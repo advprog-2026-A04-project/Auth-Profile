@@ -83,7 +83,7 @@ public class ProfileService {
                 .username(user.getUsername())
                 .fullName(user.getFullName())
                 .role(user.getRole())
-                .kycStatus(user.getKycStatus().name());
+                .kycStatus(user.getKycStatus() != null ? user.getKycStatus().name() : "NONE");
 
         if ("JASTIPER".equalsIgnoreCase(user.getRole())) {
             builder.jastiperDetails(null);
