@@ -1,0 +1,30 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/auth-profile', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/auth-profile']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'auth-profile'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/auth-profile'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      # Example of how to pass the DB environment variables!
+      # Uncomment and replace the placeholder values securely using Cloud Secret Manager.
+      # - '--set-env-vars'
+      # - 'DB_URL=jdbc:mysql://<DB_INSTANCE_IP>:3306/auth_profile,DB_USER=<YOUR_DB_USER>,DB_PASSWORD=<YOUR_DB_PASSWORD>'
+
+images:
+  - 'gcr.io/$PROJECT_ID/auth-profile'
