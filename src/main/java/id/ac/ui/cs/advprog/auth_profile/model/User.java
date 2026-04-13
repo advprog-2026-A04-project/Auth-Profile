@@ -26,4 +26,14 @@ public class User {
 
     @Column
     private String role = "TITIPERS";
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private KycStatus kycStatus = KycStatus.NONE;
+
+    @Column
+    private String kycFullName;
+
+    @Column
+    private String kycSocialMediaLink;
 }

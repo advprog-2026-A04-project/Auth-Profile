@@ -16,6 +16,8 @@ public class ProfileResponse {
     private String fullName;
     private String role;
 
+    private String kycStatus;
+
     // Placeholder fields for Jastiper role
     private Object jastiperDetails;
 

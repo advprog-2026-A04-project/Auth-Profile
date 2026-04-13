@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.auth_profile.controller;
 
+import id.ac.ui.cs.advprog.auth_profile.dto.KycRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
 import id.ac.ui.cs.advprog.auth_profile.service.ProfileService;
@@ -28,6 +29,15 @@ public class ProfileController {
         // Email is stored as the principal in SecurityContext by JwtAuthenticationFilter
         String email = authentication.getName();
         ProfileResponse profile = profileService.updateProfile(email, request);
+        return ResponseEntity.ok(profile);
+    }
+
+    @PostMapping("/kyc")
+    public ResponseEntity<ProfileResponse> submitKyc(
+            @RequestBody KycRequest request,
+            Authentication authentication) {
+        String email = authentication.getName();
+        ProfileResponse profile = profileService.submitKyc(email, request);
         return ResponseEntity.ok(profile);
     }
 }
