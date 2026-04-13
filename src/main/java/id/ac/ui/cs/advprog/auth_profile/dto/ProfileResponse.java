@@ -18,9 +18,6 @@ public class ProfileResponse {
 
     private String kycStatus;
 
-    // Placeholder fields for Jastiper role
     private Object jastiperDetails;
-
-    // Placeholder field for Titipers role
     private Boolean verified;
 }

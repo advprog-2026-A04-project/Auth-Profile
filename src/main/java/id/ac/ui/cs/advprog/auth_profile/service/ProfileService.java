@@ -86,11 +86,9 @@ public class ProfileService {
                 .kycStatus(user.getKycStatus().name());
 
         if ("JASTIPER".equalsIgnoreCase(user.getRole())) {
-            // Placeholder for Jastiper-specific details (e.g., ratings, trips, etc.)
             builder.jastiperDetails(null);
         } else {
-            // TITIPERS — show basic info + verification status placeholder
-            builder.verified(false); // placeholder, will be replaced with actual logic
+            builder.verified(false);
         }
 
         return builder.build();
