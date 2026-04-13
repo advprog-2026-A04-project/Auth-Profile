@@ -5,5 +5,6 @@ import lombok.Data;
 @Data
 public class KycRequest {
     private String kycFullName;
-    private String socialMediaLink;
+    private String nik;
+    private String phoneNumber;
 }

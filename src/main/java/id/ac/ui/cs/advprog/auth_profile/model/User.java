@@ -35,5 +35,11 @@ public class User {
     private String kycFullName;
 
     @Column
-    private String kycSocialMediaLink;
+    private String kycNik;
+
+    @Column
+    private String kycPhoneNumber;
+
+    @Column(nullable = false)
+    private boolean banned = false;
 }

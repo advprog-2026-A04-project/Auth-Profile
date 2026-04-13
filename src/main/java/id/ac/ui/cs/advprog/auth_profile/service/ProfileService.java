@@ -59,8 +59,17 @@ public class ProfileService {
             throw new RuntimeException("KYC full name is required");
         }
 
+        if (request.getNik() == null || !request.getNik().matches("\\d{16}")) {
+            throw new RuntimeException("NIK must be exactly 16 digits");
+        }
+
+        if (request.getPhoneNumber() == null || !request.getPhoneNumber().matches("^08\\d{8,11}$")) {
+            throw new RuntimeException("Phone number must start with 08 and be 10-13 digits");
+        }
+
         user.setKycFullName(request.getKycFullName());
-        user.setKycSocialMediaLink(request.getSocialMediaLink());
+        user.setKycNik(request.getNik());
+        user.setKycPhoneNumber(request.getPhoneNumber());
         user.setKycStatus(KycStatus.PENDING);
 
         User savedUser = userRepository.save(user);
