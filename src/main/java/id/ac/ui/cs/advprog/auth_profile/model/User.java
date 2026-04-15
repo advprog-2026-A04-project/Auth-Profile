@@ -25,5 +25,5 @@ public class User {
     private String fullName;
 
     @Column
-    private String role = "TITIPERS";
+    private String role = "TITIPER";
 }
