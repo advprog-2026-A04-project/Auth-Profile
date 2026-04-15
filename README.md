@@ -1,53 +1,72 @@
-# Auth & Profile Service
+# Auth/Profile Service
 
-Service untuk Authentication dan Profile management pengguna platform JSON (JaStip Online Nasional).
+Authentication and profile service for Milestone `25%` and `50%`.
 
-## Tech Stack
-- Java 21 + Spring Boot
-- Spring Security + BCrypt
-- MySQL
-- Gradle
+## Deployed URL
 
-## Cara Menjalankan
+- `https://auth-profile-api-383620816191.us-central1.run.app`
 
-### Prasyarat
-- Java 21
-- MySQL
+## Implemented Scope
 
-### Setup Database
-```sql
-CREATE DATABASE auth_profile;
-```
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
+- `GET /profile/{id}`
+- `PUT /profile`
 
-### Jalankan Aplikasi
+JWTs issued here are used directly by the Inventory, Wallet, and Order services.
+
+## Local Run
+
+Prerequisites:
+- Java `21`
+
+Run:
+
 ```bash
 ./gradlew bootRun
 ```
 
-Aplikasi berjalan di `http://localhost:8080`
+PowerShell:
 
-## Cara Mencoba
-
-### Opsi 1: Frontend (Lebih Mudah)
-Buka browser dan akses `http://localhost:8080` — sudah tersedia halaman login dan register sederhana.
-
-### Opsi 2: API Langsung
-
-**Register**
-- `POST /auth/register`
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "username": "username"
-}
+```powershell
+.\gradlew.bat bootRun
 ```
 
-**Login**
-- `POST /auth/login`
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+Default local URL:
+- `http://localhost:8080`
+
+## Environment Variables
+
+- `PORT`
+- `DB_URL`
+- `DB_DRIVER`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `APP_CORS_ALLOWED_ORIGINS`
+- `JWT_SECRET`
+- `JWT_EXPIRATION_SECONDS`
+
+Defaults are configured for an H2 file database under `/tmp`, which is enough for the milestone demo.
+
+## Test
+
+```bash
+./gradlew test
 ```
+
+Includes:
+- auth flow integration test for register -> login -> `/auth/me`
+
+## Cloud Run Deploy
+
+```bash
+gcloud run deploy auth-profile-api --source . --region us-central1 --allow-unauthenticated --max-instances=1 \
+  --set-env-vars APP_CORS_ALLOWED_ORIGINS=https://advprog-frontend-m25-m50-383620816191.us-central1.run.app \
+  --set-env-vars JWT_SECRET=<shared-jwt-secret>
+```
+
+## Notes
+
+- The service is intentionally limited to the milestone auth/profile flow.
+- Data is stored in a service-local H2 file for demo purposes.

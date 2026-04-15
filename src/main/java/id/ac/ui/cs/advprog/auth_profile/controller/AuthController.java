@@ -1,29 +1,42 @@
 package id.ac.ui.cs.advprog.auth_profile.controller;
 
+import id.ac.ui.cs.advprog.auth_profile.dto.AuthResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.LoginRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.RegisterRequest;
-import id.ac.ui.cs.advprog.auth_profile.model.User;
 import id.ac.ui.cs.advprog.auth_profile.service.AuthService;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        User user = authService.register(request);
-        return ResponseEntity.ok("User registered: " + user.getEmail());
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        User user = authService.login(request);
-        return ResponseEntity.ok("Login successful: " + user.getEmail());
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ProfileResponse> me(Authentication authentication) {
+        return ResponseEntity.ok(authService.getCurrentProfile(Long.valueOf(authentication.getName())));
     }
 }
