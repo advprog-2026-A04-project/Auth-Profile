@@ -1,0 +1,191 @@
+package id.ac.ui.cs.advprog.auth_profile.service;
+
+import id.ac.ui.cs.advprog.auth_profile.dto.AuthResponse;
+import id.ac.ui.cs.advprog.auth_profile.dto.LoginRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
+import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.RegisterRequest;
+import id.ac.ui.cs.advprog.auth_profile.model.User;
+import id.ac.ui.cs.advprog.auth_profile.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class AuthServiceTest {
+
+    private UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
+    private AuthUserFactory authUserFactory;
+    private UserProfileMapper userProfileMapper;
+    private AuthService authService;
+
+    @BeforeEach
+    void setUp() {
+        userRepository = mock(UserRepository.class);
+        passwordEncoder = mock(PasswordEncoder.class);
+        authUserFactory = new AuthUserFactory();
+        userProfileMapper = mock(UserProfileMapper.class);
+        authService = new AuthService(userRepository, passwordEncoder, authUserFactory, userProfileMapper);
+    }
+
+    @Test
+    void registerShouldRejectDuplicateEmail() {
+        RegisterRequest request = registerRequest("user@example.com", "Password123!", "demo");
+        when(userRepository.existsByEmail("user@example.com")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> authService.register(request));
+
+        assertEquals(409, exception.getStatusCode().value());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void registerShouldRejectDuplicateUsername() {
+        RegisterRequest request = registerRequest("user@example.com", "Password123!", "demo");
+        when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("demo")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> authService.register(request));
+
+        assertEquals(409, exception.getStatusCode().value());
+    }
+
+    @Test
+    void registerShouldPersistNormalizedUser() {
+        RegisterRequest request = registerRequest(" USER@EXAMPLE.COM ", " Password123! ", " demo ");
+        User savedUser = sampleUser();
+        AuthResponse mapped = new AuthResponse("jwt", 1L, "user@example.com", "demo", "demo", "TITIPER");
+
+        when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("demo")).thenReturn(false);
+        when(passwordEncoder.encode("Password123!")).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userProfileMapper.toAuthResponse(savedUser)).thenReturn(mapped);
+
+        AuthResponse response = authService.register(request);
+
+        assertEquals("jwt", response.token());
+        verify(userRepository).save(any(User.class));
+        verify(userProfileMapper).toAuthResponse(savedUser);
+    }
+
+    @Test
+    void loginShouldRejectUnknownEmail() {
+        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.login(loginRequest("missing@example.com", "Password123!"))
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+    }
+
+    @Test
+    void loginShouldRejectWrongPassword() {
+        User user = sampleUser();
+        user.setPassword("encoded");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "encoded")).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.login(loginRequest("user@example.com", "Password123!"))
+        );
+
+        assertEquals(401, exception.getStatusCode().value());
+    }
+
+    @Test
+    void loginShouldReturnMappedResponseForValidCredentials() {
+        User user = sampleUser();
+        user.setPassword("encoded");
+        AuthResponse mapped = new AuthResponse("jwt", 1L, "user@example.com", "demo", "Demo User", "TITIPER");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "encoded")).thenReturn(true);
+        when(userProfileMapper.toAuthResponse(user)).thenReturn(mapped);
+
+        AuthResponse response = authService.login(loginRequest(" user@example.com ", " Password123! "));
+
+        assertEquals("jwt", response.token());
+        verify(userProfileMapper).toAuthResponse(user);
+    }
+
+    @Test
+    void getCurrentProfileShouldLoadUserOrFail() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        assertEquals(mapped, authService.getCurrentProfile(1L));
+        verify(userProfileMapper).toProfileResponse(user);
+    }
+
+    @Test
+    void updateProfileShouldRejectTakenUsernameFromAnotherUser() {
+        User user = sampleUser();
+        User conflicting = sampleUser();
+        conflicting.setId(2L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("taken")).thenReturn(Optional.of(conflicting));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.updateProfile(1L, new ProfileUpdateRequest("taken", "Other"))
+        );
+
+        assertEquals(409, exception.getStatusCode().value());
+    }
+
+    @Test
+    void updateProfileShouldUseUsernameAsFallbackFullName() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "fresh", "fresh", "TITIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("fresh")).thenReturn(Optional.empty());
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.updateProfile(1L, new ProfileUpdateRequest(" fresh ", "   "));
+
+        assertEquals("fresh", response.username());
+        assertEquals("fresh", user.getFullName());
+    }
+
+    private static User sampleUser() {
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("user@example.com");
+        user.setUsername("demo");
+        user.setFullName("Demo User");
+        user.setRole("TITIPER");
+        return user;
+    }
+
+    private static RegisterRequest registerRequest(String email, String password, String username) {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail(email);
+        request.setPassword(password);
+        request.setUsername(username);
+        return request;
+    }
+
+    private static LoginRequest loginRequest(String email, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setEmail(email);
+        request.setPassword(password);
+        return request;
+    }
+}

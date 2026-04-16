@@ -1,5 +1,6 @@
 plugins {
 	java
+	jacoco
 	id("org.springframework.boot") version "3.5.10"
 	id("io.spring.dependency-management") version "1.1.7"
 }
@@ -46,4 +47,52 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+jacoco {
+	toolVersion = "0.8.14"
+}
+
+tasks.test {
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+	classDirectories.setFrom(
+		files(classDirectories.files.map {
+			fileTree(it) {
+				exclude("**/AuthProfileApplication*")
+			}
+		})
+	)
+}
+
+tasks.jacocoTestCoverageVerification {
+	dependsOn(tasks.test)
+	classDirectories.setFrom(
+		files(classDirectories.files.map {
+			fileTree(it) {
+				exclude("**/AuthProfileApplication*")
+			}
+		})
+	)
+	violationRules {
+		rule {
+			element = "BUNDLE"
+			limit {
+				counter = "LINE"
+				value = "COVEREDRATIO"
+				minimum = "0.90".toBigDecimal()
+			}
+		}
+	}
+}
+
+tasks.check {
+	dependsOn(tasks.jacocoTestCoverageVerification)
 }
