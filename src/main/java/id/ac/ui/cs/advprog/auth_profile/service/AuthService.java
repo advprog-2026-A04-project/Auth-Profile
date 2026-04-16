@@ -20,17 +20,24 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final AuthUserFactory authUserFactory;
+    private final UserProfileMapper userProfileMapper;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            AuthUserFactory authUserFactory,
+            UserProfileMapper userProfileMapper
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.authUserFactory = authUserFactory;
+        this.userProfileMapper = userProfileMapper;
     }
 
     public AuthResponse register(RegisterRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        String username = request.getUsername().trim();
+        String email = authUserFactory.normalizeEmail(request.getEmail());
+        String username = authUserFactory.normalizeUsername(request.getUsername());
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(CONFLICT, "Email is already registered.");
@@ -39,38 +46,32 @@ public class AuthService {
             throw new ResponseStatusException(CONFLICT, "Username is already taken.");
         }
 
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(request.getPassword().trim()));
-        user.setUsername(username);
-        user.setFullName(username);
-        user.setRole("TITIPER");
-
-        return toAuthResponse(userRepository.save(user));
+        User user = authUserFactory.createRegisteredUser(request, passwordEncoder);
+        return userProfileMapper.toAuthResponse(userRepository.save(user));
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+        User user = userRepository.findByEmail(authUserFactory.normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid email or password."));
 
         if (!passwordEncoder.matches(request.getPassword().trim(), user.getPassword())) {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid email or password.");
         }
 
-        return toAuthResponse(user);
+        return userProfileMapper.toAuthResponse(user);
     }
 
     public ProfileResponse getCurrentProfile(Long userId) {
-        return toProfileResponse(getUserById(userId));
+        return userProfileMapper.toProfileResponse(getUserById(userId));
     }
 
     public ProfileResponse getProfile(Long userId) {
-        return toProfileResponse(getUserById(userId));
+        return userProfileMapper.toProfileResponse(getUserById(userId));
     }
 
     public ProfileResponse updateProfile(Long userId, ProfileUpdateRequest request) {
         User user = getUserById(userId);
-        String username = request.username().trim();
+        String username = authUserFactory.normalizeUsername(request.username());
 
         userRepository.findByUsername(username)
                 .filter(existing -> !existing.getId().equals(userId))
@@ -83,32 +84,11 @@ public class AuthService {
                 ? username
                 : request.fullName().trim());
 
-        return toProfileResponse(userRepository.save(user));
+        return userProfileMapper.toProfileResponse(userRepository.save(user));
     }
 
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found."));
-    }
-
-    private AuthResponse toAuthResponse(User user) {
-        return new AuthResponse(
-                jwtService.generateToken(user),
-                user.getId(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getFullName(),
-                user.getRole()
-        );
-    }
-
-    private ProfileResponse toProfileResponse(User user) {
-        return new ProfileResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getFullName(),
-                user.getRole()
-        );
     }
 }
