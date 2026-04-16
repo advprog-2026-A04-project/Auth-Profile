@@ -134,6 +134,18 @@ class AuthServiceTest {
     }
 
     @Test
+    void getProfileShouldRejectMissingUser() {
+        when(userRepository.findById(9L)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.getProfile(9L)
+        );
+
+        assertEquals(404, exception.getStatusCode().value());
+    }
+
+    @Test
     void updateProfileShouldRejectTakenUsernameFromAnotherUser() {
         User user = sampleUser();
         User conflicting = sampleUser();
@@ -162,6 +174,21 @@ class AuthServiceTest {
 
         assertEquals("fresh", response.username());
         assertEquals("fresh", user.getFullName());
+    }
+
+    @Test
+    void updateProfileShouldAllowSameUserToKeepUsernameAndTrimFullName() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo Person", "TITIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("demo")).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.updateProfile(1L, new ProfileUpdateRequest(" demo ", " Demo Person "));
+
+        assertEquals("demo", response.username());
+        assertEquals("Demo Person", user.getFullName());
     }
 
     private static User sampleUser() {

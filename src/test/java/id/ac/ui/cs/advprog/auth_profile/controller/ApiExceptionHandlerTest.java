@@ -43,6 +43,21 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
+    void handleValidationShouldUseFallbackMessageWhenNoFieldErrorExists() throws Exception {
+        BeanPropertyBindingResult result = new BeanPropertyBindingResult(new Object(), "request");
+        Method method = SampleController.class.getDeclaredMethod("sample", String.class);
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
+                new org.springframework.core.MethodParameter(method, 0),
+                result
+        );
+
+        var response = handler.handleValidation(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Request validation failed.", response.getBody().message());
+    }
+
+    @Test
     void handleConstraintViolationShouldReturnBadRequest() {
         var response = handler.handleConstraintViolation(new ConstraintViolationException("bad request", Set.of()));
 

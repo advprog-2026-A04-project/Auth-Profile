@@ -33,10 +33,44 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void shouldSkipRegisterEndpoint() throws Exception {
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(mock(JwtService.class));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/auth/register");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void shouldSkipHealthEndpoint() throws Exception {
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(mock(JwtService.class));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/actuator/health");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
     void shouldPassThroughWithoutBearerToken() throws Exception {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(mock(JwtService.class));
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/auth/me");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void shouldPassThroughWithNonBearerAuthorizationHeader() throws Exception {
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(mock(JwtService.class));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/auth/me");
+        request.addHeader("Authorization", "Basic abc123");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
