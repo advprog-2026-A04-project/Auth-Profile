@@ -16,7 +16,7 @@ public class DemoAccountSeedConfig {
             UserRepository userRepository,
             JdbcTemplate jdbcTemplate,
             PasswordEncoder passwordEncoder,
-            @Value("${app.demo-accounts.enabled:true}") boolean enabled
+            @Value("${app.demo-accounts.enabled:false}") boolean enabled
     ) {
         return args -> {
             if (!enabled) {
