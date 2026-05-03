@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "app.demo-accounts.enabled=true")
+@SpringBootTest(properties = "app.demo-seed.enabled=true")
 @AutoConfigureMockMvc
 class DemoAccountSeedIntegrationTest {
 
@@ -69,5 +69,10 @@ class DemoAccountSeedIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(9001))
                 .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void seededAccountsAreOptInOnly() {
+        assertEquals(5, userRepository.count());
     }
 }
