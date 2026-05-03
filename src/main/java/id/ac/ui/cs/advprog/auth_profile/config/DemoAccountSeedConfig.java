@@ -7,9 +7,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 public class DemoAccountSeedConfig {
+    private static final Logger log = LoggerFactory.getLogger(DemoAccountSeedConfig.class);
 
     @Bean
     public CommandLineRunner seedDemoAccounts(
@@ -20,9 +23,11 @@ public class DemoAccountSeedConfig {
     ) {
         return args -> {
             if (!enabled) {
+                log.info("Demo account seeding is disabled. Set APP_DEMO_SEED_ENABLED=true to enable it for a demo environment.");
                 return;
             }
 
+            log.warn("Demo account seeding is enabled for this environment.");
             ensureAccount(userRepository, jdbcTemplate, passwordEncoder, 1001L, "demo@json.app", "demo-buyer", "Demo Buyer", "TITIPER");
             ensureAccount(userRepository, jdbcTemplate, passwordEncoder, 2001L, "jastiper1@json.app", "jastiper-2001", "Jastiper 2001", "JASTIPER");
             ensureAccount(userRepository, jdbcTemplate, passwordEncoder, 2002L, "jastiper2@json.app", "jastiper-2002", "Jastiper 2002", "JASTIPER");

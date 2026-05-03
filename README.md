@@ -17,8 +17,8 @@ Demo seeding is now explicit.
 
 Preferred controls:
 
-- `SPRING_PROFILES_ACTIVE=demo`
-- or `APP_DEMO_SEED_ENABLED=true`
+- `SPRING_PROFILES_ACTIVE=demo` for other demo profile settings
+- `APP_DEMO_SEED_ENABLED=true` to actually seed demo accounts
 
 Legacy compatibility is still supported through `APP_DEMO_ACCOUNTS_ENABLED`, but new deployments should use `APP_DEMO_SEED_ENABLED`.
 
@@ -32,7 +32,7 @@ Enable demo seeding only for local/demo deployments that need the seeded buyer, 
 
 Password for those demo accounts: `Demo123!`
 
-Default behavior is `false` so production-like environments do not silently seed public demo users. Public demo credentials are intentionally predictable and must not be enabled outside demo environments.
+Default behavior is `false` in every profile, including `demo`, so production-like environments do not silently seed public demo users. Public demo credentials are intentionally predictable and must not be enabled outside demo environments.
 
 ## Local Run
 
@@ -99,4 +99,4 @@ The demo deployment should keep the existing shared `JWT_SECRET` and CORS settin
 
 - Enabling demo seeds on a public deployment exposes known demo credentials by design.
 - Disabling demo seeds means the frontend admin and jastiper views will need alternative accounts.
-- Production-like deployments should leave `SPRING_PROFILES_ACTIVE` unset and `APP_DEMO_SEED_ENABLED=false`.
+- Production-like deployments should leave `APP_DEMO_SEED_ENABLED=false`.
