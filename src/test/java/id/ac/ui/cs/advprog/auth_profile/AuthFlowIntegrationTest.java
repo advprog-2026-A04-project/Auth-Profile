@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -64,5 +66,26 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.username").value("authflow"))
                 .andExpect(jsonPath("$.role").value("TITIPER"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "buyer.demo@auth.local, TITIPER",
+            "jastiper.demo@auth.local, JASTIPER",
+            "admin.demo@auth.local, ADMIN"
+    })
+    void demoAccountsCanLoginWithExpectedRoles(String email, String role) throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "Password123!"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.role").value(role));
     }
 }
