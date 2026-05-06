@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.auth_profile.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class JwtAuthenticationFilterTest {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @AfterEach
     void tearDown() {
@@ -111,6 +114,10 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, new MockFilterChain());
 
         assertEquals(401, response.getStatus());
-        assertEquals("{\"message\":\"Invalid or expired token.\"}", response.getContentAsString());
+        var body = objectMapper.readTree(response.getContentAsString());
+        assertEquals(401, body.get("status").asInt());
+        assertEquals("Unauthorized", body.get("error").asText());
+        assertEquals("Invalid or expired token.", body.get("message").asText());
+        assertEquals("/auth/me", body.get("path").asText());
     }
 }
