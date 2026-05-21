@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthUserFactory {
 
-    public User createRegisteredUser(RegisterRequest request, PasswordEncoder passwordEncoder) {
+    public User createRegisteredUser(RegisterRequest request, PasswordEncoder passwordEncoder, String username) {
         User user = new User();
         user.setEmail(normalizeEmail(request.getEmail()));
-        user.setUsername(normalizeUsername(request.getUsername()));
+        user.setUsername(normalizeUsername(username));
         user.setPassword(passwordEncoder.encode(request.getPassword().trim()));
         user.setFullName(user.getUsername());
         user.setRole("TITIPER");
@@ -23,6 +23,6 @@ public class AuthUserFactory {
     }
 
     public String normalizeUsername(String username) {
-        return username.trim();
+        return username == null ? "" : username.trim();
     }
 }

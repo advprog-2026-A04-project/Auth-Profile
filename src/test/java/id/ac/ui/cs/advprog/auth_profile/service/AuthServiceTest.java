@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.auth_profile.dto.LoginRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.RegisterRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.SubmitKycRequest;
 import id.ac.ui.cs.advprog.auth_profile.model.User;
 import id.ac.ui.cs.advprog.auth_profile.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -81,6 +83,50 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerShouldGenerateUniqueUsernameWhenRequestOmitsUsername() {
+        RegisterRequest request = registerRequest(" Fresh.User@Example.COM ", " Password123! ", "   ");
+        User savedUser = sampleUser();
+        savedUser.setUsername("fresh.user-2");
+        AuthResponse mapped = new AuthResponse("jwt", 1L, "fresh.user@example.com", "fresh.user-2", "fresh.user-2", "TITIPER");
+
+        when(userRepository.existsByEmail("fresh.user@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("fresh.user")).thenReturn(true);
+        when(userRepository.existsByUsername("fresh.user-2")).thenReturn(false);
+        when(passwordEncoder.encode("Password123!")).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            assertEquals("fresh.user-2", user.getUsername());
+            assertEquals("fresh.user-2", user.getFullName());
+            return savedUser;
+        });
+        when(userProfileMapper.toAuthResponse(savedUser)).thenReturn(mapped);
+
+        AuthResponse response = authService.register(request);
+
+        assertEquals("fresh.user-2", response.username());
+    }
+
+    @Test
+    void registerShouldGenerateFallbackUsernameWhenEmailLocalPartHasNoUsableCharacters() {
+        RegisterRequest request = registerRequest(" !!!@example.com ", " Password123! ", null);
+        User savedUser = sampleUser();
+        savedUser.setUsername("titiper");
+        AuthResponse mapped = new AuthResponse("jwt", 1L, "!!!@example.com", "titiper", "titiper", "TITIPER");
+
+        when(userRepository.existsByEmail("!!!@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("titiper")).thenReturn(false);
+        when(passwordEncoder.encode("Password123!")).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            assertEquals("titiper", user.getUsername());
+            return savedUser;
+        });
+        when(userProfileMapper.toAuthResponse(savedUser)).thenReturn(mapped);
+
+        assertEquals("titiper", authService.register(request).username());
+    }
+
+    @Test
     void loginShouldRejectUnknownEmail() {
         when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
 
@@ -123,6 +169,22 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginShouldRejectBannedUser() {
+        User user = sampleUser();
+        user.setPassword("encoded");
+        user.setBanned(true);
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "encoded")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.login(loginRequest("user@example.com", "Password123!"))
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
     void getCurrentProfileShouldLoadUserOrFail() {
         User user = sampleUser();
         ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER");
@@ -143,6 +205,16 @@ class AuthServiceTest {
         );
 
         assertEquals(404, exception.getStatusCode().value());
+    }
+
+    @Test
+    void getProfileShouldReturnMappedProfileWhenPresent() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        assertEquals(mapped, authService.getProfile(1L));
     }
 
     @Test
@@ -189,6 +261,129 @@ class AuthServiceTest {
 
         assertEquals("demo", response.username());
         assertEquals("Demo Person", user.getFullName());
+    }
+
+    @Test
+    void updateProfileShouldUseUsernameWhenFullNameIsNull() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "fresh", "fresh", "TITIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("fresh")).thenReturn(Optional.empty());
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.updateProfile(1L, new ProfileUpdateRequest(" fresh ", null));
+
+        assertEquals("fresh", response.fullName());
+        assertEquals("fresh", user.getFullName());
+    }
+
+    @Test
+    void submitKycShouldMoveUserToPending() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER", "PENDING", false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.submitKyc(1L, new SubmitKycRequest(" https://docs.example/kyc.pdf ", " ready "));
+
+        assertEquals("PENDING", user.getKycStatus());
+        assertEquals("https://docs.example/kyc.pdf", user.getKycDocumentUrl());
+        assertEquals("ready", user.getKycNote());
+        assertEquals("PENDING", response.kycStatus());
+    }
+
+    @Test
+    void submitKycShouldRejectBannedUserAndNormalizeEmptyNote() {
+        User user = sampleUser();
+        user.setBanned(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> authService.submitKyc(1L, new SubmitKycRequest("https://docs.example/kyc.pdf", ""))
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void approveKycShouldPromoteUserToJastiper() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "JASTIPER", "APPROVED", false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.approveKyc(1L, " valid document ");
+
+        assertEquals("JASTIPER", user.getRole());
+        assertEquals("APPROVED", user.getKycStatus());
+        assertEquals("valid document", user.getKycNote());
+        assertEquals("JASTIPER", response.role());
+    }
+
+    @Test
+    void rejectKycShouldDemoteExistingJastiper() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER", "REJECTED", false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.rejectKyc(1L, "invalid");
+
+        assertEquals("TITIPER", user.getRole());
+        assertEquals("REJECTED", response.kycStatus());
+    }
+
+    @Test
+    void rejectKycShouldKeepTitiperRoleWhenUserWasNotJastiper() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER", "REJECTED", false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.rejectKyc(1L, "   ");
+
+        assertEquals("TITIPER", response.role());
+        assertEquals(null, user.getKycNote());
+    }
+
+    @Test
+    void banUnbanAndDemoteShouldUpdateAdminControlledFields() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user))
+                .thenReturn(
+                        new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "JASTIPER", "NOT_SUBMITTED", true),
+                        new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "JASTIPER", "NOT_SUBMITTED", false),
+                        new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER", "REJECTED", false)
+                );
+
+        assertEquals(true, authService.banUser(1L, "fraud").banned());
+        assertEquals(false, authService.unbanUser(1L).banned());
+        assertEquals("TITIPER", authService.demoteJastiper(1L, "policy").role());
+        assertEquals("TITIPER", user.getRole());
+    }
+
+    @Test
+    void listUsersShouldMapAllUsers() {
+        User user = sampleUser();
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER");
+        when(userRepository.findAll()).thenReturn(List.of(user));
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        List<ProfileResponse> users = authService.listUsers();
+
+        assertEquals(1, users.size());
+        assertEquals("demo", users.getFirst().username());
     }
 
     private static User sampleUser() {

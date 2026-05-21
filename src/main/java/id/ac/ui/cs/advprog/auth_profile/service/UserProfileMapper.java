@@ -32,7 +32,9 @@ public class UserProfileMapper {
                 user.getEmail(),
                 user.getUsername(),
                 user.getFullName(),
-                user.getRole()
+                user.getRole(),
+                user.getKycStatus(),
+                user.isBanned()
         );
     }
 }
