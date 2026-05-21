@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.auth_profile.controller;
 import id.ac.ui.cs.advprog.auth_profile.dto.AdminUserActionRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.RecordJastiperRatingRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.SubmitKycRequest;
 import id.ac.ui.cs.advprog.auth_profile.service.AuthService;
 import jakarta.validation.Valid;
@@ -102,11 +103,38 @@ public class ProfileController {
         return ResponseEntity.ok(authService.demoteJastiper(userId, request == null ? null : request.note()));
     }
 
+    @PostMapping("/internal/jastipers/{id}/completed-order")
+    public ResponseEntity<ProfileResponse> recordJastiperCompletedOrder(
+            Authentication authentication,
+            @PathVariable("id") Long userId
+    ) {
+        requireInternal(authentication);
+        return ResponseEntity.ok(authService.recordJastiperCompletedOrder(userId));
+    }
+
+    @PostMapping("/internal/jastipers/{id}/rating")
+    public ResponseEntity<ProfileResponse> recordJastiperRating(
+            Authentication authentication,
+            @PathVariable("id") Long userId,
+            @Valid @RequestBody RecordJastiperRatingRequest request
+    ) {
+        requireInternal(authentication);
+        return ResponseEntity.ok(authService.recordJastiperRating(userId, request.rating()));
+    }
+
     private void requireAdmin(Authentication authentication) {
         boolean admin = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
         if (!admin) {
             throw new ResponseStatusException(FORBIDDEN, "Admin role is required.");
+        }
+    }
+
+    private void requireInternal(Authentication authentication) {
+        boolean internal = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_INTERNAL".equals(authority.getAuthority()));
+        if (!internal) {
+            throw new ResponseStatusException(FORBIDDEN, "Internal service token is required.");
         }
     }
 }

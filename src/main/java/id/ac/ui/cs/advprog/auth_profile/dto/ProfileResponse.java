@@ -7,9 +7,23 @@ public record ProfileResponse(
         String fullName,
         String role,
         String kycStatus,
-        boolean banned
+        boolean banned,
+        Long successfulTransactionCount,
+        Double averageJastiperRating
 ) {
     public ProfileResponse(Long id, String email, String username, String fullName, String role) {
-        this(id, email, username, fullName, role, "NOT_SUBMITTED", false);
+        this(id, email, username, fullName, role, "NOT_SUBMITTED", false, 0L, null);
+    }
+
+    public ProfileResponse(
+            Long id,
+            String email,
+            String username,
+            String fullName,
+            String role,
+            String kycStatus,
+            boolean banned
+    ) {
+        this(id, email, username, fullName, role, kycStatus, banned, 0L, null);
     }
 }

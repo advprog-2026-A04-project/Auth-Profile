@@ -150,6 +150,22 @@ public class AuthService {
                 .toList();
     }
 
+    public ProfileResponse recordJastiperCompletedOrder(Long jastiperId) {
+        User user = getUserById(jastiperId);
+        user.setSuccessfulTransactionCount(nonNull(user.getSuccessfulTransactionCount()) + 1);
+        return userProfileMapper.toProfileResponse(userRepository.save(user));
+    }
+
+    public ProfileResponse recordJastiperRating(Long jastiperId, int rating) {
+        if (rating < 1 || rating > 5) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Rating must be between 1 and 5.");
+        }
+        User user = getUserById(jastiperId);
+        user.setJastiperRatingCount(nonNull(user.getJastiperRatingCount()) + 1);
+        user.setJastiperRatingTotal(nonNull(user.getJastiperRatingTotal()) + rating);
+        return userProfileMapper.toProfileResponse(userRepository.save(user));
+    }
+
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found."));
@@ -191,5 +207,9 @@ public class AuthService {
 
     private boolean hasRequestedUsername(String username) {
         return username != null && !username.isBlank();
+    }
+
+    private long nonNull(Long value) {
+        return value == null ? 0L : value;
     }
 }

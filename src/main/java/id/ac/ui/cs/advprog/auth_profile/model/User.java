@@ -38,4 +38,13 @@ public class User {
 
     @Column(nullable = false)
     private boolean banned = false;
+
+    @Column
+    private Long successfulTransactionCount = 0L;
+
+    @Column
+    private Long jastiperRatingTotal = 0L;
+
+    @Column
+    private Long jastiperRatingCount = 0L;
 }

@@ -295,6 +295,23 @@ class AuthServiceTest {
     }
 
     @Test
+    void submitKycShouldNormalizeMissingAndBlankNotesToNull() {
+        User nullNoteUser = sampleUser();
+        User blankNoteUser = sampleUser();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(nullNoteUser));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(blankNoteUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userProfileMapper.toProfileResponse(any(User.class)))
+                .thenReturn(new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER", "PENDING", false));
+
+        authService.submitKyc(1L, new SubmitKycRequest("https://docs.example/kyc.pdf", null));
+        authService.submitKyc(2L, new SubmitKycRequest("https://docs.example/kyc.pdf", "   "));
+
+        assertEquals(null, nullNoteUser.getKycNote());
+        assertEquals(null, blankNoteUser.getKycNote());
+    }
+
+    @Test
     void submitKycShouldRejectBannedUserAndNormalizeEmptyNote() {
         User user = sampleUser();
         user.setBanned(true);
@@ -384,6 +401,121 @@ class AuthServiceTest {
 
         assertEquals(1, users.size());
         assertEquals("demo", users.getFirst().username());
+    }
+
+    @Test
+    void recordJastiperCompletedOrderShouldIncrementProfileStatistic() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        user.setSuccessfulTransactionCount(2L);
+        ProfileResponse mapped = new ProfileResponse(
+                1L,
+                "user@example.com",
+                "demo",
+                "Demo User",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                3L,
+                null
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.recordJastiperCompletedOrder(1L);
+
+        assertEquals(3L, user.getSuccessfulTransactionCount());
+        assertEquals(3L, response.successfulTransactionCount());
+    }
+
+    @Test
+    void recordJastiperCompletedOrderShouldHandleMissingCounter() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        user.setSuccessfulTransactionCount(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(new ProfileResponse(
+                1L,
+                "user@example.com",
+                "demo",
+                "Demo User",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                1L,
+                null
+        ));
+
+        ProfileResponse response = authService.recordJastiperCompletedOrder(1L);
+
+        assertEquals(1L, user.getSuccessfulTransactionCount());
+        assertEquals(1L, response.successfulTransactionCount());
+    }
+
+    @Test
+    void recordJastiperRatingShouldUpdateAverageRatingInputs() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        user.setJastiperRatingCount(1L);
+        user.setJastiperRatingTotal(4L);
+        ProfileResponse mapped = new ProfileResponse(
+                1L,
+                "user@example.com",
+                "demo",
+                "Demo User",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                0L,
+                4.5
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.recordJastiperRating(1L, 5);
+
+        assertEquals(2L, user.getJastiperRatingCount());
+        assertEquals(9L, user.getJastiperRatingTotal());
+        assertEquals(4.5, response.averageJastiperRating());
+    }
+
+    @Test
+    void recordJastiperRatingShouldRejectOutOfRangeRatings() {
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+                () -> authService.recordJastiperRating(1L, 0)).getStatusCode().value());
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+                () -> authService.recordJastiperRating(1L, 6)).getStatusCode().value());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void recordJastiperRatingShouldHandleMissingCounters() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        user.setJastiperRatingCount(null);
+        user.setJastiperRatingTotal(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(new ProfileResponse(
+                1L,
+                "user@example.com",
+                "demo",
+                "Demo User",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                0L,
+                5.0
+        ));
+
+        ProfileResponse response = authService.recordJastiperRating(1L, 5);
+
+        assertEquals(1L, user.getJastiperRatingCount());
+        assertEquals(5L, user.getJastiperRatingTotal());
+        assertEquals(5.0, response.averageJastiperRating());
     }
 
     private static User sampleUser() {

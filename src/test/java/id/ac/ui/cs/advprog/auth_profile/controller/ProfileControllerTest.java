@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.auth_profile.controller;
 import id.ac.ui.cs.advprog.auth_profile.dto.AdminUserActionRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.RecordJastiperRatingRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.SubmitKycRequest;
 import id.ac.ui.cs.advprog.auth_profile.service.AuthService;
 import java.util.List;
@@ -127,6 +128,74 @@ class ProfileControllerTest {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> new ProfileController(service).listUsers(null)
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
+    void internalEndpointsShouldRecordJastiperStats() {
+        AuthService service = mock(AuthService.class);
+        ProfileController controller = new ProfileController(service);
+        var internal = new UsernamePasswordAuthenticationToken(
+                "internal-service",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_INTERNAL"))
+        );
+        ProfileResponse completed = new ProfileResponse(
+                7L,
+                "jastiper@example.com",
+                "jastiper",
+                "Jastiper",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                3L,
+                null
+        );
+        ProfileResponse rated = new ProfileResponse(
+                7L,
+                "jastiper@example.com",
+                "jastiper",
+                "Jastiper",
+                "JASTIPER",
+                "APPROVED",
+                false,
+                3L,
+                4.5
+        );
+
+        when(service.recordJastiperCompletedOrder(7L)).thenReturn(completed);
+        when(service.recordJastiperRating(7L, 5)).thenReturn(rated);
+
+        assertEquals(3L, controller.recordJastiperCompletedOrder(internal, 7L).getBody().successfulTransactionCount());
+        assertEquals(4.5, controller.recordJastiperRating(internal, 7L, new RecordJastiperRatingRequest(5))
+                .getBody()
+                .averageJastiperRating());
+    }
+
+    @Test
+    void internalEndpointsShouldRejectNonInternalCaller() {
+        AuthService service = mock(AuthService.class);
+        ProfileController controller = new ProfileController(service);
+        var buyer = new UsernamePasswordAuthenticationToken("7", null, List.of(new SimpleGrantedAuthority("ROLE_TITIPER")));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.recordJastiperCompletedOrder(buyer, 7L)
+        );
+
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
+    void internalEndpointsShouldRejectMissingAuthentication() {
+        AuthService service = mock(AuthService.class);
+        ProfileController controller = new ProfileController(service);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.recordJastiperCompletedOrder(null, 7L)
         );
 
         assertEquals(403, exception.getStatusCode().value());

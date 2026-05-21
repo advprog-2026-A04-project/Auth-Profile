@@ -7,6 +7,7 @@ import id.ac.ui.cs.advprog.auth_profile.model.User;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,44 @@ class UserProfileMapperTest {
         assertEquals("demo", response.username());
         assertEquals("Demo User", response.fullName());
         assertEquals("TITIPER", response.role());
+    }
+
+    @Test
+    void toProfileResponseShouldExposeReputationStatsAndAverageRating() {
+        User user = sampleUser();
+        user.setSuccessfulTransactionCount(4L);
+        user.setJastiperRatingCount(2L);
+        user.setJastiperRatingTotal(9L);
+        UserProfileMapper mapper = new UserProfileMapper(mock(JwtService.class));
+
+        ProfileResponse response = mapper.toProfileResponse(user);
+
+        assertEquals(4L, response.successfulTransactionCount());
+        assertEquals(4.5, response.averageJastiperRating());
+    }
+
+    @Test
+    void toProfileResponseShouldDefaultMissingReputationStats() {
+        User user = sampleUser();
+        user.setSuccessfulTransactionCount(null);
+        user.setJastiperRatingCount(null);
+        user.setJastiperRatingTotal(null);
+        UserProfileMapper mapper = new UserProfileMapper(mock(JwtService.class));
+
+        ProfileResponse response = mapper.toProfileResponse(user);
+
+        assertEquals(0L, response.successfulTransactionCount());
+        assertNull(response.averageJastiperRating());
+    }
+
+    @Test
+    void toProfileResponseShouldIgnoreRatingWhenTotalIsMissing() {
+        User user = sampleUser();
+        user.setJastiperRatingCount(2L);
+        user.setJastiperRatingTotal(null);
+        UserProfileMapper mapper = new UserProfileMapper(mock(JwtService.class));
+
+        assertNull(mapper.toProfileResponse(user).averageJastiperRating());
     }
 
     private static User sampleUser() {

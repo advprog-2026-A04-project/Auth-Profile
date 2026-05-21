@@ -34,7 +34,18 @@ public class UserProfileMapper {
                 user.getFullName(),
                 user.getRole(),
                 user.getKycStatus(),
-                user.isBanned()
+                user.isBanned(),
+                user.getSuccessfulTransactionCount() == null ? 0L : user.getSuccessfulTransactionCount(),
+                averageJastiperRating(user)
         );
+    }
+
+    private Double averageJastiperRating(User user) {
+        Long ratingCount = user.getJastiperRatingCount();
+        Long ratingTotal = user.getJastiperRatingTotal();
+        if (ratingCount == null || ratingCount == 0 || ratingTotal == null) {
+            return null;
+        }
+        return Math.round((ratingTotal.doubleValue() / ratingCount.doubleValue()) * 100.0) / 100.0;
     }
 }
