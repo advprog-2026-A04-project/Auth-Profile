@@ -5,6 +5,11 @@ public record ProfileResponse(
         String email,
         String username,
         String fullName,
-        String role
+        String role,
+        String kycStatus,
+        boolean banned
 ) {
+    public ProfileResponse(Long id, String email, String username, String fullName, String role) {
+        this(id, email, username, fullName, role, "NOT_SUBMITTED", false);
+    }
 }

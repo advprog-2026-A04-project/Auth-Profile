@@ -23,7 +23,7 @@ class AuthUserFactoryTest {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode("Secret123!")).thenReturn("encoded");
 
-        User user = factory.createRegisteredUser(request, encoder);
+        User user = factory.createRegisteredUser(request, encoder, "demo-user");
 
         assertEquals("user@example.com", user.getEmail());
         assertEquals("demo-user", user.getUsername());
@@ -36,5 +36,6 @@ class AuthUserFactoryTest {
     void normalizeHelpersShouldTrimEmailAndUsername() {
         assertEquals("person@example.com", factory.normalizeEmail(" Person@Example.com "));
         assertEquals("person", factory.normalizeUsername(" person "));
+        assertEquals("", factory.normalizeUsername(null));
     }
 }

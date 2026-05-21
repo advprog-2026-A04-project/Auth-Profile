@@ -26,4 +26,16 @@ public class User {
 
     @Column
     private String role = "TITIPER";
+
+    @Column(nullable = false)
+    private String kycStatus = "NOT_SUBMITTED";
+
+    @Column
+    private String kycDocumentUrl;
+
+    @Column
+    private String kycNote;
+
+    @Column(nullable = false)
+    private boolean banned = false;
 }

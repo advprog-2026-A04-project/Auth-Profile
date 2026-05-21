@@ -55,13 +55,20 @@ public class DemoAccountSeedConfig {
         }
 
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password, username, full_name, role) VALUES (?, ?, ?, ?, ?, ?)",
+                """
+                        INSERT INTO users (
+                            id, email, password, username, full_name, role,
+                            kyc_status, banned
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
                 id,
                 email,
                 passwordEncoder.encode("Demo123!"),
                 username,
                 fullName,
-                role
+                role,
+                "JASTIPER".equals(role) ? "APPROVED" : "NOT_SUBMITTED",
+                false
         );
     }
 }
