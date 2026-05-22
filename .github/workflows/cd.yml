@@ -49,8 +49,15 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          INTERNAL_API_TOKEN: ${{ secrets.INTERNAL_API_TOKEN }}
         run: |
           trap 'rm -f deploy.env' EXIT
+          clean_env_value() {
+            printf '%s' "${1:-}" | sed '1s/^\xEF\xBB\xBF//' | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+          }
+
+          INTERNAL_API_TOKEN="$(clean_env_value "$INTERNAL_API_TOKEN")"
+          INTERNAL_API_TOKEN="${INTERNAL_API_TOKEN:-json-internal-token}"
           default_db_url="jdbc:h2:mem:authprofile;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
 
           cloud_sql_valid=false
@@ -87,6 +94,7 @@ jobs:
             printf 'DB_USERNAME=%s\n' "$DB_USERNAME"
             printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD"
             printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'INTERNAL_API_TOKEN=%s\n' "$INTERNAL_API_TOKEN"
             printf 'APP_DEMO_SEED_ENABLED=%s\n' "$demo_seed_enabled"
           } > deploy.env
 

@@ -1,12 +1,14 @@
 package id.ac.ui.cs.advprog.auth_profile.controller;
 
 import id.ac.ui.cs.advprog.auth_profile.dto.AdminUserActionRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.JastiperRatingRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.SubmitKycRequest;
 import id.ac.ui.cs.advprog.auth_profile.service.AuthService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
@@ -24,6 +27,9 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 public class ProfileController {
 
     private final AuthService authService;
+
+    @Value("${app.internal-token:json-internal-token}")
+    private String internalToken;
 
     public ProfileController(AuthService authService) {
         this.authService = authService;
@@ -102,11 +108,43 @@ public class ProfileController {
         return ResponseEntity.ok(authService.demoteJastiper(userId, request == null ? null : request.note()));
     }
 
+    @PostMapping("/internal/jastipers/{id}/completed-order")
+    public ResponseEntity<ProfileResponse> recordJastiperCompletedOrder(
+            @RequestHeader(value = "X-Internal-Token", required = false) String token,
+            @PathVariable("id") Long userId
+    ) {
+        requireInternalToken(token);
+        return ResponseEntity.ok(authService.recordJastiperCompletedOrder(userId));
+    }
+
+    @PostMapping("/internal/jastipers/{id}/rating")
+    public ResponseEntity<ProfileResponse> recordJastiperRating(
+            @RequestHeader(value = "X-Internal-Token", required = false) String token,
+            @PathVariable("id") Long userId,
+            @RequestBody(required = false) JastiperRatingRequest request
+    ) {
+        requireInternalToken(token);
+        return ResponseEntity.ok(authService.recordJastiperRating(userId, request == null ? null : request.rating()));
+    }
+
     private void requireAdmin(Authentication authentication) {
         boolean admin = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
         if (!admin) {
             throw new ResponseStatusException(FORBIDDEN, "Admin role is required.");
         }
+    }
+
+    private void requireInternalToken(String token) {
+        String expected = sanitizeToken(internalToken);
+        if (expected.isBlank() || !expected.equals(sanitizeToken(token))) {
+            throw new ResponseStatusException(FORBIDDEN, "Internal service token is required.");
+        }
+    }
+
+    private String sanitizeToken(String token) {
+        return token == null
+                ? ""
+                : token.replace("\uFEFF", "").trim();
     }
 }

@@ -32,13 +32,28 @@ class UserProfileMapperTest {
     @Test
     void toProfileResponseShouldMapProfileFields() {
         UserProfileMapper mapper = new UserProfileMapper(mock(JwtService.class));
-        ProfileResponse response = mapper.toProfileResponse(sampleUser());
+        User user = sampleUser();
+        user.setCompletedOrders(3);
+        user.setRatingCount(2);
+        user.setRatingTotal(9);
+        ProfileResponse response = mapper.toProfileResponse(user);
 
         assertEquals(7L, response.id());
         assertEquals("user@example.com", response.email());
         assertEquals("demo", response.username());
         assertEquals("Demo User", response.fullName());
         assertEquals("TITIPER", response.role());
+        assertEquals(3, response.completedOrders());
+        assertEquals(2, response.ratingCount());
+        assertEquals(4.5, response.averageRating());
+    }
+
+    @Test
+    void toProfileResponseShouldReturnZeroAverageWhenNoRatingsExist() {
+        UserProfileMapper mapper = new UserProfileMapper(mock(JwtService.class));
+        ProfileResponse response = mapper.toProfileResponse(sampleUser());
+
+        assertEquals(0.0, response.averageRating());
     }
 
     private static User sampleUser() {

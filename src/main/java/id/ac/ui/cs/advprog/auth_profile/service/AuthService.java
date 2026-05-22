@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
@@ -148,6 +149,22 @@ public class AuthService {
                 .stream()
                 .map(userProfileMapper::toProfileResponse)
                 .toList();
+    }
+
+    public ProfileResponse recordJastiperCompletedOrder(Long userId) {
+        User user = getUserById(userId);
+        user.setCompletedOrders(user.getCompletedOrders() + 1);
+        return userProfileMapper.toProfileResponse(userRepository.save(user));
+    }
+
+    public ProfileResponse recordJastiperRating(Long userId, Integer rating) {
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new ResponseStatusException(BAD_REQUEST, "Rating must be between 1 and 5.");
+        }
+        User user = getUserById(userId);
+        user.setRatingCount(user.getRatingCount() + 1);
+        user.setRatingTotal(user.getRatingTotal() + rating);
+        return userProfileMapper.toProfileResponse(userRepository.save(user));
     }
 
     private User getUserById(Long userId) {

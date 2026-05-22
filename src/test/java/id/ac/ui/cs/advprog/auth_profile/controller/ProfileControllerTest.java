@@ -1,6 +1,7 @@
 package id.ac.ui.cs.advprog.auth_profile.controller;
 
 import id.ac.ui.cs.advprog.auth_profile.dto.AdminUserActionRequest;
+import id.ac.ui.cs.advprog.auth_profile.dto.JastiperRatingRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileResponse;
 import id.ac.ui.cs.advprog.auth_profile.dto.ProfileUpdateRequest;
 import id.ac.ui.cs.advprog.auth_profile.dto.SubmitKycRequest;
@@ -9,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -129,6 +131,44 @@ class ProfileControllerTest {
                 () -> new ProfileController(service).listUsers(null)
         );
 
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
+    void internalCompletedOrderShouldRequireTokenAndDelegate() {
+        AuthService service = mock(AuthService.class);
+        ProfileController controller = new ProfileController(service);
+        ReflectionTestUtils.setField(controller, "internalToken", "secret");
+        ProfileResponse response = new ProfileResponse(7L, "jastiper@example.com", "jastiper", "Jastiper", "JASTIPER",
+                "APPROVED", false, 1, 0, 0.0);
+        when(service.recordJastiperCompletedOrder(7L)).thenReturn(response);
+
+        assertEquals(1, controller.recordJastiperCompletedOrder("\uFEFFsecret", 7L).getBody().completedOrders());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.recordJastiperCompletedOrder("wrong", 7L)
+        );
+        assertEquals(403, exception.getStatusCode().value());
+    }
+
+    @Test
+    void internalRatingShouldSanitizeTokenAndHandleMissingBody() {
+        AuthService service = mock(AuthService.class);
+        ProfileController controller = new ProfileController(service);
+        ReflectionTestUtils.setField(controller, "internalToken", "secret");
+        ProfileResponse response = new ProfileResponse(7L, "jastiper@example.com", "jastiper", "Jastiper", "JASTIPER",
+                "APPROVED", false, 0, 1, 5.0);
+        when(service.recordJastiperRating(7L, 5)).thenReturn(response);
+
+        assertEquals(5.0, controller.recordJastiperRating(" secret ", 7L, new JastiperRatingRequest(5))
+                .getBody()
+                .averageRating());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.recordJastiperRating(null, 7L, null)
+        );
         assertEquals(403, exception.getStatusCode().value());
     }
 }

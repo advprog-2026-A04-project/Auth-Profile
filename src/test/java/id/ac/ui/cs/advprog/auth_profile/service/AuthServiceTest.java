@@ -386,6 +386,53 @@ class AuthServiceTest {
         assertEquals("demo", users.getFirst().username());
     }
 
+    @Test
+    void recordJastiperCompletedOrderShouldIncrementCounter() {
+        User user = sampleUser();
+        user.setRole("JASTIPER");
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "JASTIPER",
+                "APPROVED", false, 1, 0, 0.0);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.recordJastiperCompletedOrder(1L);
+
+        assertEquals(1, user.getCompletedOrders());
+        assertEquals(1, response.completedOrders());
+    }
+
+    @Test
+    void recordJastiperRatingShouldValidateAndTrackAverageInputs() {
+        User user = sampleUser();
+        user.setRatingCount(1);
+        user.setRatingTotal(4);
+        ProfileResponse mapped = new ProfileResponse(1L, "user@example.com", "demo", "Demo User", "TITIPER",
+                "NOT_SUBMITTED", false, 0, 2, 4.5);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userProfileMapper.toProfileResponse(user)).thenReturn(mapped);
+
+        ProfileResponse response = authService.recordJastiperRating(1L, 5);
+
+        assertEquals(2, user.getRatingCount());
+        assertEquals(9, user.getRatingTotal());
+        assertEquals(4.5, response.averageRating());
+    }
+
+    @Test
+    void recordJastiperRatingShouldRejectInvalidRatings() {
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> authService.recordJastiperRating(1L, null))
+                .getStatusCode()
+                .value());
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> authService.recordJastiperRating(1L, 0))
+                .getStatusCode()
+                .value());
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> authService.recordJastiperRating(1L, 6))
+                .getStatusCode()
+                .value());
+    }
+
     private static User sampleUser() {
         User user = new User();
         user.setId(1L);

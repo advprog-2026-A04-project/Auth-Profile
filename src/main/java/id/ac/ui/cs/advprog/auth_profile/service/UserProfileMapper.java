@@ -27,6 +27,9 @@ public class UserProfileMapper {
     }
 
     public ProfileResponse toProfileResponse(User user) {
+        double averageRating = user.getRatingCount() == 0
+                ? 0.0
+                : (double) user.getRatingTotal() / user.getRatingCount();
         return new ProfileResponse(
                 user.getId(),
                 user.getEmail(),
@@ -34,7 +37,10 @@ public class UserProfileMapper {
                 user.getFullName(),
                 user.getRole(),
                 user.getKycStatus(),
-                user.isBanned()
+                user.isBanned(),
+                user.getCompletedOrders(),
+                user.getRatingCount(),
+                averageRating
         );
     }
 }

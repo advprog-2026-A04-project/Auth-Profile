@@ -38,4 +38,13 @@ public class User {
 
     @Column(nullable = false)
     private boolean banned = false;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int completedOrders = 0;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int ratingCount = 0;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int ratingTotal = 0;
 }
