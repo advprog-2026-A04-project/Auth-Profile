@@ -19,5 +19,18 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build and Test
-        run: ./gradlew test
+      - name: Build, test, coverage gate, and package
+        env:
+          SPRING_PROFILES_ACTIVE: test
+        run: ./gradlew check bootJar --no-daemon
+
+      - name: Upload CI reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-profile-ci-reports
+          if-no-files-found: warn
+          path: |
+            build/test-results/test/**
+            build/reports/tests/test/**
+            build/reports/jacoco/test/**
