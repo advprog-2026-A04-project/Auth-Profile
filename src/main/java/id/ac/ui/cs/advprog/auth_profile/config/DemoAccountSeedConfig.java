@@ -46,7 +46,26 @@ public class DemoAccountSeedConfig {
             String fullName,
             String role
     ) {
+        String kycStatus = "JASTIPER".equals(role) ? "APPROVED" : "NOT_SUBMITTED";
+
         if (userRepository.findById(id).isPresent()) {
+            String encodedPassword = passwordEncoder.encode("Demo123!");
+            jdbcTemplate.update(
+                    """
+                            UPDATE users SET
+                                email = ?, password = ?, username = ?, full_name = ?,
+                                role = ?, kyc_status = ?, banned = ?
+                            WHERE id = ?
+                            """,
+                    email,
+                    encodedPassword,
+                    username,
+                    fullName,
+                    role,
+                    kycStatus,
+                    false,
+                    id
+            );
             return;
         }
 
@@ -54,6 +73,7 @@ public class DemoAccountSeedConfig {
             return;
         }
 
+        String encodedPassword = passwordEncoder.encode("Demo123!");
         jdbcTemplate.update(
                 """
                         INSERT INTO users (
@@ -63,11 +83,11 @@ public class DemoAccountSeedConfig {
                         """,
                 id,
                 email,
-                passwordEncoder.encode("Demo123!"),
+                encodedPassword,
                 username,
                 fullName,
                 role,
-                "JASTIPER".equals(role) ? "APPROVED" : "NOT_SUBMITTED",
+                kycStatus,
                 false
         );
     }

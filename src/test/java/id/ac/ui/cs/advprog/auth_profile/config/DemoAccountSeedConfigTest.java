@@ -9,6 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,12 +33,17 @@ class DemoAccountSeedConfigTest {
     }
 
     @Test
-    void ensureAccountShouldSkipWhenFixedIdAlreadyExists() {
+    void ensureAccountShouldRepairWhenFixedIdAlreadyExists() {
         when(userRepository.findById(1001L)).thenReturn(Optional.of(new User()));
+        when(passwordEncoder.encode("Demo123!")).thenReturn("encoded-demo-password");
 
         invokeEnsureAccount();
 
-        verifyNoInteractions(jdbcTemplate, passwordEncoder);
+        verify(passwordEncoder).encode("Demo123!");
+        verify(jdbcTemplate).update(
+                contains("UPDATE users SET"),
+                any(Object[].class)
+        );
         verify(userRepository, never()).existsByEmail("demo@json.app");
         verify(userRepository, never()).existsByUsername("demo-buyer");
     }
