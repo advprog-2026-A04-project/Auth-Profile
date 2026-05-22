@@ -51,11 +51,15 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           trap 'rm -f deploy.env' EXIT
+          db_driver="$DB_DRIVER"
+          if [[ "${DB_URL:-}" == *"jdbc:h2:"* ]]; then
+            db_driver="org.h2.Driver"
+          fi
           {
             printf 'APP_CORS_ALLOWED_ORIGINS=%s\n' "$APP_CORS_ALLOWED_ORIGINS"
             printf 'CLOUD_SQL_INSTANCE_CONNECTION_NAME=%s\n' "$CLOUD_SQL_INSTANCE_CONNECTION_NAME"
             printf 'DB_URL=%s\n' "$DB_URL"
-            printf 'DB_DRIVER=%s\n' "$DB_DRIVER"
+            printf 'DB_DRIVER=%s\n' "$db_driver"
             printf 'DB_USERNAME=%s\n' "$DB_USERNAME"
             printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD"
             printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
